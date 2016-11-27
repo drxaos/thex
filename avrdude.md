@@ -10,3 +10,10 @@ programmer
   miso  = 9;
 ;
 ```
+
+# programmers.txt
+```
+gpio.name=GPIO
+gpio.communication=linuxgpio
+gpio.protocol=linuxgpio
+```
