@@ -16,4 +16,6 @@ programmer
 gpio.name=GPIO
 gpio.communication=linuxgpio
 gpio.protocol=linuxgpio
+gpio.program.protocol=linuxgpio
+gpio.program.tool=avrdude
 ```
