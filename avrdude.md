@@ -1,8 +1,9 @@
 # Raspberry PI 3 <- SPI -> Freeduino 2009 (Duemilanove)
 
 make avrdude+linuxspi
-- !!! disable reset pin unexport
-- https://github.com/kcuzner/avrdude
+- download https://github.com/kcuzner/avrdude
+- !!! disable reset pin unexport http://stackoverflow.com/questions/39524234/bug-with-writing-to-file-in-linux-sys-class-gpio
+- install http://kevincuzner.com/2013/05/27/raspberry-pi-as-an-avr-programmer/
 
 copy and check config
 ```
