@@ -1,8 +1,16 @@
 import spidev
 import time
 import turtle
+from Tkinter import *
+
+master = Tk()
+w = Scale(master, from_=62, to=80, length=500, orient=HORIZONTAL)
+w.set(71)
+w.pack()
 
 g = turtle.Turtle()
+g.tracer(0, 0)
+g.speed(0)
 g.penup()
 
 spi = spidev.SpiDev()
@@ -47,19 +55,28 @@ def spi_get_hall2():
 def spi_set_mode(mode):
 	spi_set_byte(0x04, mode)
 
+def spi_set_srv(speed):
+	spi_set_byte(0x05, speed)
+
 def spi_end():
 	spi.xfer2([0xFF])
 	return
 
 m = 1;
+sp = 0;
 while True:
 	spi_handshake()
 	hall1 = spi_get_hall1()
 	hall2 = spi_get_hall2()
 	#m = 3-m;
 	#spi_set_mode(m);
+	#sp = sp+1;
+	#if(sp>220): sp=150;
+	spi_set_srv(w.get());
 	spi_end()
-	print "Hall1: " + str(hall1) + ", Hall2: " + str(hall2)
+	print "Hall1: " + str(hall1) + ", Hall2: " + str(hall2) + ", PWM: " + str(w.get())
 	g.setpos((hall1-500)/2, (hall2-500)/2);
 	g.dot(2, "blue");
-	#time.sleep(0.05)
+	turtle.update()
+	#time.sleep(0.01)
+	w.update();
