@@ -1,6 +1,7 @@
 
 #include <avr/pgmspace.h>
 #include <Adafruit_PWMServoDriver.h>
+#include "pwm.h"
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
@@ -19,6 +20,14 @@ void setup() {
   pwm.reset();
   pwm.setPWMFreq(200);
 
+  setPwmFrequency(9, 256);
+  analogWrite(9, 0);
+
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(1000);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(1000);
+
   // SPI
   pinMode(MISO, OUTPUT);
   SPCR |= _BV(SPE);
@@ -27,6 +36,7 @@ void setup() {
   kem_init();
 }
 
+byte srv = 42;
 int hall1, hall2;
 byte show_mode = 1;
 unsigned long show_time;
@@ -39,18 +49,22 @@ void loop() {
 
   if (millis() - show_time > 100 || millis() - show_time < 0) {
     show_time = millis();
+
+    analogWrite(9, srv);
+
     switch (show_mode) {
       case 1:
-        kem_show(hall1 % 1000);
+        kem_show(srv % 1000);
         break;
       case 2:
-        kem_show(hall2 % 1000);
+        kem_show(hall1 % 1000);
         break;
       case 3:
         kem_show(hall2 % 1000);
         break;
     }
   }
+
 
 }
 
@@ -142,7 +156,7 @@ byte spi_recv_byte() {
 boolean spi_handler()
 {
   boolean comm = false;
-  digitalWrite(LED_BUILTIN, HIGH);
+  //digitalWrite(LED_BUILTIN, HIGH);
   if (SPI_RDY) {
     boolean done = false;
     comm = true;
@@ -176,6 +190,12 @@ boolean spi_handler()
             show_mode = recv;
           }
           break;
+        case 0x05: // set speed
+          recv = spi_recv_byte();
+          if (!spi_fail) {
+            srv = recv;
+          }
+          break;
         default: // idle
           SPDR = 0x00;
           break;
@@ -185,6 +205,6 @@ boolean spi_handler()
       }
     }
   }
-  digitalWrite(LED_BUILTIN, LOW);
+  //digitalWrite(LED_BUILTIN, LOW);
   return comm;
 }
