@@ -4,11 +4,16 @@ import turtle
 import ctypes
 import math
 from Tkinter import *
+import time
 
+millis = lambda: int(round(time.time() * 1000))
 master = Tk()
-w = Scale(master, from_=62, to=80, length=500, orient=HORIZONTAL)
+w = Scale(master, from_=60, to=80, length=500, orient=HORIZONTAL)
 w.set(70)
 w.pack()
+w1 = Scale(master, from_=0, to=20, length=500, orient=HORIZONTAL)
+w1.set(7)
+w1.pack()
 btn = Button(master, text = "calibrate")
 btn.pack();
 btn1 = Button(master, text = "free")
@@ -23,6 +28,8 @@ btn5 = Button(master, text = "hold6")
 btn5.pack();
 btn6 = Button(master, text = "hold55")
 btn6.pack();
+btn7 = Button(master, text = "toggle demo")
+btn7.pack();
 g = turtle.Turtle()
 g.tracer(0, 0)
 g.speed(0)
@@ -41,6 +48,7 @@ def spi_get_int(cmd):
 	resp = [0]
 	res = 0
 	resp = spi.xfer2([cmd])
+	time.sleep(0.01)
 	resp = spi.xfer2([0x00])
 	res = resp[0]
 	resp = spi.xfer2([0x00])
@@ -51,6 +59,7 @@ def spi_get_int(cmd):
 def spi_get_int_next():
 	resp = [0]
 	res = 0
+	time.sleep(0.01)
 	resp = spi.xfer2([0x00])
 	res = resp[0]
 	resp = spi.xfer2([0x00])
@@ -62,6 +71,7 @@ def spi_get_byte(cmd):
 	resp = [0]
 	res = 0
 	resp = spi.xfer2([cmd])
+	time.sleep(0.01)
 	resp = spi.xfer2([0x00])
 	res = resp[0]
 	return res
@@ -71,16 +81,13 @@ def spi_set_byte(cmd, value):
 	res = 0
 	resp = spi.xfer2([cmd])
 	resp = spi.xfer2([value])
-	time.sleep(0.01)
 
 def spi_set_int(cmd, value):
 	resp = [0]
 	res = 0
 	resp = spi.xfer2([cmd])
 	resp = spi.xfer2([value & 0xFF])
-	time.sleep(0.01)
 	resp = spi.xfer2([(value>>8) & 0xFF])
-	time.sleep(0.01)
 #	resp = spi.xfer2([100])
 #	resp = spi.xfer2([0])
 
@@ -135,7 +142,18 @@ def spi_params():
 		'px7': spi_get_int_next(),
 		'py7': spi_get_int_next(),
 		'px8': spi_get_int_next(),
-		'py8': spi_get_int_next()
+		'py8': spi_get_int_next(),
+		'pa0': spi_get_int_next(),
+		'pa1': spi_get_int_next(),
+		'pa2': spi_get_int_next(),
+		'pa3': spi_get_int_next(),
+		'pa4': spi_get_int_next(),
+		'pa5': spi_get_int_next(),
+		'pa6': spi_get_int_next(),
+		'pa7': spi_get_int_next(),
+		'pa8': spi_get_int_next(),
+		'cx': spi_get_int_next(),
+		'cy': spi_get_int_next(),
 	}
 
 def spi_end():
@@ -145,6 +163,8 @@ def spi_end():
 calibrating = False;
 sfree = False;
 shold = False;
+sdemo = False;
+sdt = 0;
 starget = 0;
 
 def calibrate(e):
@@ -160,6 +180,8 @@ btn1.bind("<Button-1>", srv_free)
 def srv_hold0(e):
 	global shold;
 	global starget;
+	global sdt;
+	sdt = millis() + 3000
 	shold = True
 	starget = 000
 btn2.bind("<Button-1>", srv_hold0)
@@ -167,6 +189,8 @@ btn2.bind("<Button-1>", srv_hold0)
 def srv_hold2(e):
 	global shold;
 	global starget;
+	global sdt;
+	sdt = millis() + 3000
 	shold = True
 	starget = 200
 btn3.bind("<Button-1>", srv_hold2)
@@ -174,6 +198,8 @@ btn3.bind("<Button-1>", srv_hold2)
 def srv_hold4(e):
 	global shold;
 	global starget;
+	global sdt;
+	sdt = millis() + 3000
 	shold = True
 	starget = 400
 btn4.bind("<Button-1>", srv_hold4)
@@ -181,6 +207,8 @@ btn4.bind("<Button-1>", srv_hold4)
 def srv_hold6(e):
 	global shold;
 	global starget;
+	global sdt;
+	sdt = millis() + 3000
 	shold = True
 	starget = 600
 btn5.bind("<Button-1>", srv_hold6)
@@ -188,9 +216,16 @@ btn5.bind("<Button-1>", srv_hold6)
 def srv_hold55(e):
 	global shold;
 	global starget;
+	global sdt;
+	sdt = millis() + 3000
 	shold = True
 	starget = 550
 btn6.bind("<Button-1>", srv_hold55)
+
+def srv_demo(e):
+	global sdemo;
+	sdemo = not sdemo
+btn7.bind("<Button-1>", srv_demo)
 
 m = 1;
 sp = 0;
@@ -199,6 +234,8 @@ def loop():
 	global sfree;
 	global shold;
 	global starget;
+	global sdemo;
+	global sdt;
 	if(sfree):
 		spi_handshake()
 		spi_set_srv_free();
@@ -270,22 +307,64 @@ def loop():
 
 		spi_end()
 		print "done"
+		
+		print "pa0: " + str(p['pa0']*1.80/math.pi - 360) + " (" + str(p['pa0']) + ")"
+		print "pa1: " + str(p['pa1']*1.80/math.pi - 360) + " (" + str(p['pa1']) + ")"
+		print "pa2: " + str(p['pa2']*1.80/math.pi - 360) + " (" + str(p['pa2']) + ")"
+		print "pa3: " + str(p['pa3']*1.80/math.pi - 360) + " (" + str(p['pa3']) + ")"
+		print "pa4: " + str(p['pa4']*1.80/math.pi - 360) + " (" + str(p['pa4']) + ")"
+		print "pa5: " + str(p['pa5']*1.80/math.pi - 360) + " (" + str(p['pa5']) + ")"
+		print "pa6: " + str(p['pa6']*1.80/math.pi - 360) + " (" + str(p['pa6']) + ")"
+		print "pa7: " + str(p['pa7']*1.80/math.pi - 360) + " (" + str(p['pa7']) + ")"
+		print "pa8: " + str(p['pa8']*1.80/math.pi - 360) + " (" + str(p['pa8']) + ")"
+
+		g.pen(pencolor="red", pensize=1)
+		g.penup()
+		g.setpos(p['cx']-500, p['cy']-500);
+		g.pendown()
+		g.setpos(p['cx']+math.cos(p['pa0']*0.01)*200-500, p['cy']+math.sin(p['pa0']*0.01)*200-500);
+		g.pen(pencolor="green", pensize=1)
+		g.penup()
+		g.setpos(p['cx']-500, p['cy']-500);
+		g.pendown()
+		g.setpos(p['cx']+math.cos(p['pa2']*0.01)*200-500, p['cy']+math.sin(p['pa2']*0.01)*200-500);
+		g.pen(pencolor="blue", pensize=1)
+		g.penup()
+		g.setpos(p['cx']-500, p['cy']-500);
+		g.pendown()
+		g.setpos(p['cx']+math.cos(p['pa4']*0.01)*200-500, p['cy']+math.sin(p['pa4']*0.01)*200-500);
+		g.pen(pencolor="aqua", pensize=1)
+		g.penup()
+		g.setpos(p['cx']-500, p['cy']-500);
+		g.pendown()
+		g.setpos(p['cx']+math.cos(p['pa6']*0.01)*200-500, p['cy']+math.sin(p['pa6']*0.01)*200-500);
+		g.pen(pencolor="black", pensize=1)
+		g.penup()
+
+	
+	if(sdemo):
+		if(millis() > sdt):
+			starget = starget + 50
+			if(starget >= 800):
+				starget = 0
+			spi_handshake()
+			spi_set_srv_hold();
+			spi_set_srv_target(starget);
+			print "Target=" + str(spi_get_srv_target());
+			print "Pos=" + str(spi_get_srv_pos());
+			spi_end()
+			sdt = millis() + 1000
+
 	
 	spi_handshake()
 	hall1 = spi_get_hall1()
 	hall2 = spi_get_hall2()
-	#m = 3-m;
-	#spi_set_mode(m);
-	#sp = sp+1;
-	#if(sp>220): sp=150;
+	spi_set_mode(w1.get());
 	spi_set_srv(w.get());
 	spi_end()
-	#print "Hall1: " + str(hall1) + ", Hall2: " + str(hall2) + ", PWM: " + str(w.get())
 	g.setpos((hall1-500), (hall2-500));
 	g.dot(2, "blue");
 	turtle.update()
-	#time.sleep(0.1)
-	#master.update();
 	master.after(1, loop);
 
 master.after(1, loop);
