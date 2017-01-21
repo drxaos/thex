@@ -1,6 +1,7 @@
 
 #include "pwm.h"
 #include "kem.h"
+#include "math.h"
 
 
 void setup() {
@@ -33,11 +34,12 @@ byte srv = 70;
 byte srv_prev = 71;
 byte srv_next = 70;
 byte srv_mode = 0; // 0-free, 1-hold
+byte srv_dir = 1; // 1 по часовой, -1 против
 double srv_pos = 0;
 double srv_target = 0;
 unsigned long srv_change = millis();
 int hall1, hall2;
-byte show_mode = 4;
+byte show_mode = 9;
 unsigned long show_time;
 byte calibrate = 0;
 
@@ -87,55 +89,49 @@ double find_pos(int x, int y) {
   return res;
 }
 
-void srv_hold_speed(char d) {
-  if (srv_prev > SRV0 + d) {
-    srv = srv_prev - 1;
-  }
-  if (srv_prev < SRV0 + d) {
-    srv = srv_prev + 1;
-  }
-}
-
 void srv_hold() {
+  if (srv_target < 0 || srv_target >= 8) {
+    srv_target = 0;
+  }
   double dif = srv_pos - srv_target;
   if (dif < 0) {
     dif += 8;
   }
-  if (7.97 < dif) {
-    srv_hold_speed(0);
+  if (7.96 < dif) {
+    srv = SRV0;
   }
   if (7.5 < dif && dif <= 7.97) {
-    srv_hold_speed(1);
+    srv = SRV0 + 1 * srv_dir;
   }
   if (7 < dif && dif <= 7.5) {
-    srv_hold_speed(2);
+    srv = SRV0 + 2 * srv_dir;
   }
   if (6 < dif && dif <= 7) {
-    srv_hold_speed(5);
+    srv = SRV0 + 5 * srv_dir;
   }
   if (5 < dif && dif <= 6) {
-    srv_hold_speed(7);
+    srv = SRV0 + 7 * srv_dir;
   }
   if (4 <= dif && dif <= 5) {
-    srv_hold_speed(8);
+    srv = SRV0 + 8 * srv_dir;
   }
   if (3 <= dif && dif < 4) {
-    srv_hold_speed(-8);
+    srv = SRV0 - 8 * srv_dir;
   }
   if (2 <= dif && dif < 3) {
-    srv_hold_speed(-7);
+    srv = SRV0 - 7 * srv_dir;
   }
   if (1 <= dif && dif < 2) {
-    srv_hold_speed(-5);
+    srv = SRV0 - 5 * srv_dir;
   }
   if (0.5 <= dif && dif < 1) {
-    srv_hold_speed(-2);
+    srv = SRV0 - 2 * srv_dir;
   }
-  if (0.03 <= dif && dif < 0.5) {
-    srv_hold_speed(-1);
+  if (0.04 <= dif && dif < 0.5) {
+    srv = SRV0 - 1 * srv_dir;
   }
-  if (dif < 0.03) {
-    srv_hold_speed(0);
+  if (dif < 0.04) {
+    srv = SRV0;
   }
 }
 
@@ -192,6 +188,21 @@ void loop() {
         break;
       case 6:
         kem_show(int(srv_target * 100) % 1000);
+        break;
+      case 7:
+        kem_show(int(find_pos(hall1, hall2) * 100) % 1000);
+        break;
+      case 8:
+        kem_show(int(pa[0] * 100) % 1000);
+        break;
+      case 9:
+        kem_show(int(pa[2] * 100) % 1000);
+        break;
+      case 10:
+        kem_show(int(pa[4] * 100) % 1000);
+        break;
+      case 11:
+        kem_show(int(pa[6] * 100) % 1000);
         break;
     }
   }
@@ -265,7 +276,7 @@ void do_calibrate() {
   // round 2 - замер времени
   unsigned long round_start = millis();
   round_time = 0;
-  byte N = 3;
+  byte N = 1;
   for (byte i = 0; i < N; i++) {
 
     kem_show(200 + i);
@@ -351,52 +362,6 @@ void do_calibrate() {
     }
   }
 
-
-  // round 4 - торможение
-  kem_show(400);
-  done = false;
-  started = false;
-
-  pdsq = 120;
-  while (done == false) {
-    upd_hall();
-    x = hall1;
-    y = hall2;
-    dx = long(x) - long(sx);
-    dy = long(y) - long(sy);
-    dsq = sqrt(dx * dx + dy * dy);
-
-    // остановка ступенями
-    if (started && pdsq - 20 > dsq && srv > SRV0 + 1 ) {
-      srv--;
-      upd_srv();
-      pdsq = dsq;
-    }
-
-    // начало пройдено
-    if (dsq > 140) {
-      started = true;
-      mdsq = dsq;
-      srv = SRV0 + 5;
-      upd_srv();
-    }
-
-    // ожидание конечной точки
-    if (started && dsq < 50) {
-      if (mdsq > dsq) { // запоминаем минимум
-        mdsq = dsq;
-      }
-      if (mdsq < 5) { // достаточно близко
-        done = true;
-      }
-      if (mdsq + 5 < dsq) { // начали удаляться
-        done = true;
-      }
-    }
-  }
-  srv = SRV0;
-  upd_srv();
-
   cx = 0;
   cy = 0;
   for (byte i = 0; i < 8; i++) { // ищем центр
@@ -413,7 +378,7 @@ void do_calibrate() {
   while (pa[0] <= PI * 2) {
     pa[0] += PI * 2;
   }
-  while (pa[8] <= pa[0]) {
+  while (pa[8] <= pa[0] + PI) {
     pa[8] += PI * 2;
   }
 
@@ -429,7 +394,18 @@ void do_calibrate() {
     }
   }
 
+  srv_dir = 1;
+  if (pa[2] > pa[6]) { // инверсное подключение
+    srv_dir = -1;
+    swap(&pa[1], &pa[7]);
+    swap(&pa[2], &pa[6]);
+    swap(&pa[3], &pa[5]);
+  }
 
+
+  // возврат в 0
+  srv_mode = 1;
+  srv_target = 0;
 }
 
 #define SPI_RDY ((SPSR & (1 << SPIF)) != 0)
@@ -550,6 +526,17 @@ boolean spi_handler()
           spi_send_int((int) py[7]);
           spi_send_int((int) px[8]);
           spi_send_int((int) py[8]);
+          spi_send_int((int) int(pa[0] * 100));
+          spi_send_int((int) int(pa[1] * 100));
+          spi_send_int((int) int(pa[2] * 100));
+          spi_send_int((int) int(pa[3] * 100));
+          spi_send_int((int) int(pa[4] * 100));
+          spi_send_int((int) int(pa[5] * 100));
+          spi_send_int((int) int(pa[6] * 100));
+          spi_send_int((int) int(pa[7] * 100));
+          spi_send_int((int) int(pa[8] * 100));
+          spi_send_int((int) cx);
+          spi_send_int((int) cy);
           break;
         case 0x08: // set srv mode
           recv = spi_recv_byte();
