@@ -1,118 +1,59 @@
 Calibrating
-
 sx: 624
-
 sy: 639
-
 r1, started
-
 r1, mdsq: 49.41
-
 r1, mdsq: 48.60
-
 r1, mdsq: 47.80
-
 r1, mdsq: 47.20
-
 r1, mdsq: 46.40
-
 r1, mdsq: 40.61
-
 r1, mdsq: 34.06
-
 r1, mdsq: 28.32
-
 r1, mdsq: 21.21
-
 r1, mdsq: 14.14
-
 r1, mdsq: 7.81
-
 r1, mdsq: 7.81
-
 r1, done
-
 r2, time: 1608
-
 r2, seg_time: 201
-
 r3, seg: 1
-
     x: 554
-
     y: 554
-
     round_start: 16990
-
     round_end: 17191
-
 r3, seg: 2
-
     x: 456
-
     y: 456
-
     round_start: 17191
-
     round_end: 17392
-
 r3, seg: 3
-
     x: 388
-
     y: 388
-
     round_start: 17392
-
     round_end: 17593
-
 r3, seg: 4
-
     x: 426
-
     y: 426
-
     round_start: 17593
-
     round_end: 17794
-
 r3, seg: 5
-
     x: 535
-
     y: 535
-
     round_start: 17794
-
     round_end: 17995
-
 r3, seg: 6
-
     x: 626
-
     y: 626
-
     round_start: 17995
-
     round_end: 18196
-
 r3, seg: 7
-
     x: 661
-
     y: 661
-
     round_start: 18196
-
     round_end: 18397
-
 r3, seg: 8
-
     x: 634
-
     y: 634
-
     round_start: 18397
-
     round_end: 18598
-
