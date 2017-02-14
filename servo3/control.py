@@ -8,10 +8,10 @@ import time
 
 millis = lambda: int(round(time.time() * 1000))
 master = Tk()
-wb = Scale(master, from_=0, to=65535, length=500, orient=HORIZONTAL)
-wb.set(23986)
+wb = Scale(master, from_=0, to=360, length=500, orient=HORIZONTAL)
+wb.set(91)
 wb.pack()
-w = Scale(master, from_=-5000, to=5000, length=500, orient=HORIZONTAL)
+w = Scale(master, from_=-90, to=90, length=500, orient=HORIZONTAL)
 w.set(0)
 w.pack()
 w1 = Scale(master, from_=0, to=20, length=500, orient=HORIZONTAL)
