@@ -1,11 +1,5 @@
 
-void swap(int *x, int *y)
-{
-  int t;
-  t = *x;
-  *x = *y;
-  *y = t;
-}
+// ##### UTILS #####
 
 void swap(float *x, float *y)
 {
@@ -28,24 +22,6 @@ union {
   float asFloat;
 } temp16;
 
-void init_pwm() {
-  // PWM resolution: 16-bit
-  // PWM frequency: 244 Hz
-  // PWM duty OC1A(D9): 0
-  DDRB |= 1 << 1 | 1 << 2;
-  PORTB &= ~(1 << 1 | 1 << 2);
-  TCCR1A = 0b00000010;
-  //TCCR1A = 0b10100010;
-  TCCR1B = 0b00011001;
-  ICR1H = 255;
-  ICR1L = 255;
-}
-
-void init_spi() {
-  // SPI slave
-  pinMode(MISO, OUTPUT);
-  SPCR |= _BV(SPE);
-}
 
 #define DBG_EN
 #ifdef DBG_EN
@@ -56,9 +32,20 @@ void init_spi() {
 #define DBG2(x,y)
 #endif
 
+// ##### INIT #####
+
+#include <Servo.h>
+Servo _srv;
+
+void init_spi() {
+  // SPI slave
+  pinMode(MISO, OUTPUT);
+  SPCR |= _BV(SPE);
+}
+
 void setup() {
   cli();
-  init_pwm();
+  _srv.attach(9);
   init_spi();
   sei();
 
@@ -68,11 +55,12 @@ void setup() {
 }
 
 
+// ##### DATA #####
 
-uint16_t srv_base = 23986; // нулевая скорость
+uint16_t srv_base = 91; // нулевая скорость
 int sp[] = { // уровни скорости (получаются эмпирически)
-  -4500, -3000, -2500, -2000, -1700, -1300, -684, -385, -300, -192,
-  0, 192, 300, 385, 684, 1300, 1700, 2000, 2500, 3000, 4500
+  -25, -18, -15, -12, -10, -8, -6, -4, -2, -1,
+  0, 1, 2, 4, 6, 8, 10, 12, 15, 18, 25
 };
 byte srv_dir = 1; // 1 по часовой, -1 против
 int cx, cy; // середина, от нее меряются углы
@@ -92,16 +80,12 @@ unsigned long show_time;
 byte calibrate = 0;
 
 
+
+// ##### CONTROL #####
+
 void upd_hall() {
   hall1 = analogRead(A0);
   hall2 = analogRead(A1);
-}
-
-void set_pwm(uint16_t pwm) {
-  // set 16-bit PWM OC1A(D9)
-  pwm ? TCCR1A |= 1 << 7 : TCCR1A &= ~(1 << 7);
-  OCR1AH = highByte(pwm);
-  OCR1AL = lowByte(pwm);
 }
 
 int spd(char level) { // -10..10
@@ -113,18 +97,16 @@ boolean upd_srv() {
   if (srv_next == srv_prev) {
     return true;
   }
-  if (srv_next != srv_prev && millis() - srv_change > 25) {
+  if (srv_next != srv_prev && millis() - srv_change > 20) {
     if (srv_next > srv_prev) {
-      if (srv_next - srv_prev > 1000) srv_next = srv_prev + 350;
-      else if (srv_next - srv_prev > 15) srv_next = srv_prev + (srv_next - srv_prev) / 3;
+      if (srv_next - srv_prev >= 4) srv_next = srv_prev + (srv_next - srv_prev) / 2;
       else srv_next = srv_prev + 1;
     }
     if (srv_next < srv_prev) {
-      if (srv_prev - srv_next > 1000) srv_next = srv_prev - 350;
-      else if (srv_prev - srv_next > 15) srv_next = srv_prev - (srv_prev - srv_next) / 3;
+      if (srv_prev - srv_next >= 4) srv_next = srv_prev - (srv_prev - srv_next) / 2;
       else srv_next = srv_prev - 1;
     }
-    set_pwm(srv_next);
+    _srv.write(srv_next);
     srv_prev = srv_next;
     srv_change = millis();
   }
@@ -161,16 +143,16 @@ void srv_hold() {
     srv = spd(0);
   }
   if (7.75 < dif && dif <= 7.97) {
-    srv = spd(1 * srv_dir);
-  }
-  if (7 < dif && dif <= 7.75) {
     srv = spd(2 * srv_dir);
   }
-  if (7 < dif && dif <= 7.5) {
+  if (7 < dif && dif <= 7.75) {
     srv = spd(3 * srv_dir);
   }
+  if (7 < dif && dif <= 7.5) {
+    srv = spd(4 * srv_dir);
+  }
   if (6 < dif && dif <= 7) {
-    srv = spd(6 * srv_dir);
+    srv = spd(7 * srv_dir);
   }
   if (5 < dif && dif <= 6) {
     srv = spd(9 * srv_dir);
@@ -185,16 +167,16 @@ void srv_hold() {
     srv = spd(-9 * srv_dir);
   }
   if (1 <= dif && dif < 2) {
-    srv = spd(-6 * srv_dir);
+    srv = spd(-7 * srv_dir);
   }
   if (0.5 <= dif && dif < 1) {
-    srv = spd(-3 * srv_dir);
+    srv = spd(-4 * srv_dir);
   }
   if (0.25 <= dif && dif < 0.5) {
-    srv = spd(-2 * srv_dir);
+    srv = spd(-3 * srv_dir);
   }
   if (0.04 <= dif && dif < 0.25) {
-    srv = spd(-1 * srv_dir);
+    srv = spd(-2 * srv_dir);
   }
   if (dif < 0.04) {
     srv = spd(0);
@@ -435,6 +417,10 @@ void do_calibrate() {
   srv_mode = 1;
   srv_target = 0;
 }
+
+
+
+// ##### COMMUNICATION #####
 
 #define SPI_RDY ((SPSR & (1 << SPIF)) != 0)
 unsigned long spi_time;
